@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { recordVisitor, checkAdminKeyword } from '@/app/actions';
+import { recordVisitor, checkAdminKeyword, fetchBrandingConfig } from '@/app/actions';
 import AdminLoginModal from '@/security/AdminLoginModal';
+import MatrixBackground from '@/components/MatrixBackground';
 
 interface VisitorFormProps {
     onComplete: (name: string, mode: 'cli' | 'gui') => void;
@@ -16,6 +17,29 @@ export default function VisitorForm({ onComplete }: VisitorFormProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showAdminLogin, setShowAdminLogin] = useState(false);
+    const [branding, setBranding] = useState({
+        background_name_text: 'MIMANSH',
+        matrix_enabled: true,
+        matrix_color: '#22c55e',
+        matrix_speed: 1.0,
+        matrix_density: 0.8,
+        matrix_opacity: 0.3,
+    });
+
+    useEffect(() => {
+        fetchBrandingConfig().then((config) => {
+            if (config) {
+                setBranding({
+                    background_name_text: config.background_name_text || 'MIMANSH',
+                    matrix_enabled: config.matrix_enabled ?? true,
+                    matrix_color: config.matrix_color || '#22c55e',
+                    matrix_speed: config.matrix_speed ?? 1.0,
+                    matrix_density: config.matrix_density ?? 0.8,
+                    matrix_opacity: config.matrix_opacity ?? 0.3,
+                });
+            }
+        }).catch(() => { });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,15 +70,37 @@ export default function VisitorForm({ onComplete }: VisitorFormProps) {
     };
 
     if (showAdminLogin) {
-        return <AdminLoginModal onClose={() => setShowAdminLogin(false)} />;
+        return (
+            <>
+                <MatrixBackground
+                    text={branding.background_name_text}
+                    enabled={branding.matrix_enabled}
+                    color={branding.matrix_color}
+                    speed={branding.matrix_speed}
+                    density={branding.matrix_density}
+                    opacity={branding.matrix_opacity}
+                />
+                <AdminLoginModal onClose={() => setShowAdminLogin(false)} />
+            </>
+        );
     }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+            {/* Matrix Background */}
+            <MatrixBackground
+                text={branding.background_name_text}
+                enabled={branding.matrix_enabled}
+                color={branding.matrix_color}
+                speed={branding.matrix_speed}
+                density={branding.matrix_density}
+                opacity={branding.matrix_opacity}
+            />
+
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-md p-6 border border-green-500 bg-black shadow-[0_0_20px_rgba(34,197,94,0.2)] relative overflow-hidden"
+                className="w-full max-w-md p-6 border border-green-500 bg-black/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,197,94,0.2)] relative overflow-hidden z-10"
             >
                 {/* Scanline effect for modal */}
                 <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0" />
@@ -70,7 +116,7 @@ export default function VisitorForm({ onComplete }: VisitorFormProps) {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-black border border-green-800 text-green-500 p-2 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-900 placeholder-green-900"
+                            className="w-full bg-black/60 border border-green-800 text-green-500 p-2 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-900 placeholder-green-900"
                             placeholder="John Doe"
                             autoFocus
                         />
@@ -82,7 +128,7 @@ export default function VisitorForm({ onComplete }: VisitorFormProps) {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-black border border-green-800 text-green-500 p-2 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-900 placeholder-green-900"
+                            className="w-full bg-black/60 border border-green-800 text-green-500 p-2 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-900 placeholder-green-900"
                             placeholder="john@example.com"
                         />
                         <p className="text-[10px] text-green-800 mt-1">

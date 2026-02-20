@@ -287,3 +287,17 @@
     transform: translate(0)
   }
 }
+
+/* Loading bar animation for loading.tsx */
+@keyframes loading {
+  0% { width: 0; }
+  50% { width: 100%; }
+  100% { width: 0; }
+}
+
+/* Dynamic theme variables (injected by ThemeProvider) */
+:root {
+  --terminal-color: #22c55e;
+  --accent-color: #06b6d4;
+  --font-family: 'JetBrains Mono', monospace;
+}

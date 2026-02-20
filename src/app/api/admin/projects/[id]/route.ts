@@ -1,40 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
 import { getSession } from '@/security/auth';
+import { projectsService } from '@/core/services/index';
+import { apiSuccess, apiError, apiCatch } from '@/core/api-response';
 
 // PUT — update project by ID
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    try {
+        const session = await getSession();
+        if (!session) return apiError('Unauthorized', 401);
 
-    const { id } = await params;
-    const body = await req.json();
-
-    const { data, error } = await supabase
-        .from('projects')
-        .update(body)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(data);
+        const { id } = await params;
+        const body = await req.json();
+        const data = await projectsService.update(id, body, session.username);
+        return apiSuccess(data);
+    } catch (error) {
+        return apiCatch(error);
+    }
 }
 
 // DELETE — delete project by ID
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    try {
+        const session = await getSession();
+        if (!session) return apiError('Unauthorized', 401);
 
-    const { id } = await params;
-
-    const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id);
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+        const { id } = await params;
+        await projectsService.delete(id, session.username);
+        return apiSuccess({ deleted: true });
+    } catch (error) {
+        return apiCatch(error);
+    }
 }

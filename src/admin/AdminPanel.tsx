@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Loader2, LogOut, User, Briefcase, GraduationCap, Code, BarChart3,
-    FileJson, Plus, Save, Trash2, X, Copy, Check, Palette, Layout
+    FileJson, Plus, Save, Trash2, X, Copy, Check, Palette, Layout, Wand2
 } from 'lucide-react';
+import MatrixBackground from '@/components/MatrixBackground';
 
 // ── Generic Admin Hook ─────────────────────────────────────
 function useAdminData<T>(endpoint: string) {
@@ -21,7 +22,9 @@ function useAdminData<T>(endpoint: string) {
             const res = await fetch(`/api/admin/${endpoint}`);
             if (res.ok) {
                 const json = await res.json();
-                setData(Array.isArray(json) ? json : [json]);
+                // Handle both ApiResponse wrapper {success, data} and legacy raw arrays
+                const payload = json.data ?? json;
+                setData(Array.isArray(payload) ? payload : [payload]);
             }
         } catch { /* silent */ }
         setLoading(false);
@@ -39,7 +42,7 @@ function ProfileManager() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        fetch('/api/admin/profile').then(r => r.json()).then(setProfile).catch(() => { });
+        fetch('/api/admin/profile').then(r => r.json()).then(res => setProfile(res.data ?? res)).catch(() => { });
     }, []);
 
     const handleSave = async () => {
@@ -509,6 +512,149 @@ function CVImportEngine() {
     );
 }
 
+// ── Branding Manager ───────────────────────────────────────
+function BrandingManager() {
+    const [config, setConfig] = useState<any>(null);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/admin/branding').then(r => r.json()).then(res => {
+            setConfig(res.data || res);
+        }).catch(() => { });
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        await fetch('/api/admin/branding', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config),
+        });
+        setSaving(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+    };
+
+    if (!config) return <Loader2 className="animate-spin text-green-500" />;
+
+    return (
+        <div className="space-y-6">
+            {/* Background Text */}
+            <FieldRow
+                label="BACKGROUND_NAME_TEXT"
+                value={config.background_name_text || 'MIMANSH'}
+                onChange={v => setConfig({ ...config, background_name_text: v })}
+            />
+            <FieldRow
+                label="DISPLAY_NAME"
+                value={config.display_name || 'MIMANSH'}
+                onChange={v => setConfig({ ...config, display_name: v })}
+            />
+
+            {/* Matrix Enable/Disable */}
+            <ToggleRow
+                label="MATRIX_ENABLED"
+                description="Enable the falling Matrix rain effect on the landing page."
+                value={config.matrix_enabled !== false}
+                onChange={v => setConfig({ ...config, matrix_enabled: v })}
+            />
+
+            {/* Background Mode */}
+            <div>
+                <label className="block text-xs text-green-700 mb-2 tracking-wider">BACKGROUND_MODE</label>
+                <div className="flex gap-3">
+                    {(['matrix', 'minimal', 'custom'] as const).map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => setConfig({ ...config, background_mode: mode })}
+                            className={`px-6 py-3 border text-xs font-bold tracking-wider transition-all ${config.background_mode === mode
+                                ? 'border-green-500 text-green-500 bg-green-900/20'
+                                : 'border-green-900/50 text-gray-500 hover:border-green-700'
+                                }`}
+                        >
+                            {mode.toUpperCase()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Matrix Color */}
+            <div>
+                <label className="block text-xs text-green-700 mb-1 tracking-wider">MATRIX_COLOR</label>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="color"
+                        value={config.matrix_color || '#22c55e'}
+                        onChange={e => setConfig({ ...config, matrix_color: e.target.value })}
+                        className="w-10 h-10 bg-transparent border border-green-900/50 cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-400 font-mono">{config.matrix_color}</span>
+                </div>
+            </div>
+
+            {/* Matrix Speed */}
+            <div>
+                <label className="block text-xs text-green-700 mb-1 tracking-wider">MATRIX_SPEED ({config.matrix_speed?.toFixed(1) || '1.0'})</label>
+                <input
+                    type="range"
+                    min="0.1"
+                    max="5.0"
+                    step="0.1"
+                    value={config.matrix_speed || 1.0}
+                    onChange={e => setConfig({ ...config, matrix_speed: parseFloat(e.target.value) })}
+                    className="w-full accent-green-500"
+                />
+            </div>
+
+            {/* Matrix Density */}
+            <div>
+                <label className="block text-xs text-green-700 mb-1 tracking-wider">MATRIX_DENSITY ({config.matrix_density?.toFixed(1) || '0.8'})</label>
+                <input
+                    type="range"
+                    min="0.1"
+                    max="2.0"
+                    step="0.1"
+                    value={config.matrix_density || 0.8}
+                    onChange={e => setConfig({ ...config, matrix_density: parseFloat(e.target.value) })}
+                    className="w-full accent-green-500"
+                />
+            </div>
+
+            {/* Matrix Opacity */}
+            <div>
+                <label className="block text-xs text-green-700 mb-1 tracking-wider">MATRIX_OPACITY ({config.matrix_opacity?.toFixed(2) || '0.30'})</label>
+                <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.05"
+                    value={config.matrix_opacity || 0.3}
+                    onChange={e => setConfig({ ...config, matrix_opacity: parseFloat(e.target.value) })}
+                    className="w-full accent-green-500"
+                />
+            </div>
+
+            {/* Live Preview */}
+            <div className="border border-green-900/50 relative overflow-hidden" style={{ height: 200 }}>
+                <h4 className="text-xs text-green-700 tracking-wider p-2 relative z-10">LIVE_PREVIEW</h4>
+                <div className="absolute inset-0">
+                    <MatrixBackground
+                        text={config.background_name_text || 'MIMANSH'}
+                        enabled={config.matrix_enabled !== false && config.background_mode === 'matrix'}
+                        color={config.matrix_color || '#22c55e'}
+                        speed={config.matrix_speed || 1.0}
+                        density={config.matrix_density || 0.8}
+                        opacity={config.matrix_opacity || 0.3}
+                    />
+                </div>
+            </div>
+
+            <SaveButton saving={saving} saved={saved} onClick={handleSave} />
+        </div>
+    );
+}
+
 // ── Theme Manager ──────────────────────────────────────────
 const COLOR_PRESETS = [
     { name: 'Matrix', terminal: '#22c55e', accent: '#06b6d4' },
@@ -533,7 +679,7 @@ function ThemeManager() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => { });
+        fetch('/api/admin/settings').then(r => r.json()).then(res => setSettings(res.data ?? res)).catch(() => { });
     }, []);
 
     const handleSave = async () => {
@@ -634,7 +780,7 @@ function LayoutControl() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => { });
+        fetch('/api/admin/settings').then(r => r.json()).then(res => setSettings(res.data ?? res)).catch(() => { });
     }, []);
 
     const handleSave = async () => {
@@ -662,8 +808,8 @@ function LayoutControl() {
                             key={mode}
                             onClick={() => setSettings({ ...settings, default_mode: mode })}
                             className={`px-6 py-3 border text-xs font-bold tracking-wider transition-all ${settings.default_mode === mode
-                                    ? 'border-green-500 text-green-500 bg-green-900/20'
-                                    : 'border-green-900/50 text-gray-500 hover:border-green-700'
+                                ? 'border-green-500 text-green-500 bg-green-900/20'
+                                : 'border-green-900/50 text-gray-500 hover:border-green-700'
                                 }`}
                         >
                             {mode.toUpperCase()}
@@ -828,6 +974,7 @@ export default function AdminPanel() {
                     <TabsTrigger value="experience" className="text-xs gap-1"><Briefcase className="w-3 h-3" /> Experience</TabsTrigger>
                     <TabsTrigger value="education" className="text-xs gap-1"><GraduationCap className="w-3 h-3" /> Education</TabsTrigger>
                     <TabsTrigger value="skills" className="text-xs">Skills</TabsTrigger>
+                    <TabsTrigger value="branding" className="text-xs gap-1"><Wand2 className="w-3 h-3" /> Branding</TabsTrigger>
                     <TabsTrigger value="theme" className="text-xs gap-1"><Palette className="w-3 h-3" /> Theme</TabsTrigger>
                     <TabsTrigger value="layout" className="text-xs gap-1"><Layout className="w-3 h-3" /> Layout</TabsTrigger>
                     <TabsTrigger value="analytics" className="text-xs gap-1"><BarChart3 className="w-3 h-3" /> Analytics</TabsTrigger>
@@ -848,6 +995,9 @@ export default function AdminPanel() {
                 </TabsContent>
                 <TabsContent value="skills" className="mt-6">
                     <ManagerCard title="Skills Manager" description="Categorized technical skills."><SkillsManager /></ManagerCard>
+                </TabsContent>
+                <TabsContent value="branding" className="mt-6">
+                    <ManagerCard title="Branding Manager" description="Matrix background, display text, and identity configuration."><BrandingManager /></ManagerCard>
                 </TabsContent>
                 <TabsContent value="theme" className="mt-6">
                     <ManagerCard title="Theme Manager" description="Colors, fonts, and visual identity."><ThemeManager /></ManagerCard>

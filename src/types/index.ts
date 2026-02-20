@@ -70,3 +70,41 @@ export interface CommandOutput {
     output: React.ReactNode;
     timestamp: Date;
 }
+
+export interface BrandingConfig {
+    id: string;
+    display_name: string;
+    background_name_text: string;
+    matrix_enabled: boolean;
+    matrix_speed: number;
+    matrix_density: number;
+    matrix_color: string;
+    matrix_opacity: number;
+    background_mode: 'matrix' | 'minimal' | 'custom';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface VisualConfig {
+    id: string;
+    terminal_color: string;
+    accent_color: string;
+    font_family: string;
+    dark_mode: boolean;
+    ascii_header: string;
+    boot_enabled: boolean;
+    visitor_form_enabled: boolean;
+    default_mode: 'cli' | 'gui';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AuditLog {
+    id: string;
+    action: string;
+    admin_username?: string;
+    change_summary?: string;
+    ip_address?: string;
+    details?: Record<string, unknown>;
+    created_at: string;
+}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import MatrixBackground from '@/components/MatrixBackground';
 import {
     fetchProfile,
     fetchProjects,
@@ -580,8 +581,9 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     if (!isBootDone) {
         return (
-            <div className="h-full flex flex-col items-center justify-center font-mono text-green-500 p-8 min-h-screen">
-                <div className="w-full max-w-md space-y-4">
+            <div className="h-full flex flex-col items-center justify-center font-mono text-green-500 p-8 min-h-screen relative">
+                <MatrixBackground text="MIMANSH" enabled={true} color="#22c55e" speed={1.0} density={0.8} opacity={0.25} />
+                <div className="w-full max-w-md space-y-4 relative z-10">
                     <div className="flex justify-between text-xs">
                         <span>BOOT_SEQUENCE_INIT</span>
                         <span>{bootStep > 0 ? 'OK' : '...'}</span>
