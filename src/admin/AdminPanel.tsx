@@ -117,8 +117,8 @@ function SocialsManager() {
             <Button onClick={() => setCreating(true)} className="bg-green-900/20 border border-green-500 text-green-500 text-xs">
                 <Plus className="w-3 h-3 mr-1" /> ADD_SOCIAL_LINK
             </Button>
-            {socials.map((e: any) => (
-                <div key={e.id} className="flex items-center justify-between p-3 border border-green-900/50">
+            {socials.map((e: any, index: number) => (
+                <div key={e.id || index} className="flex items-center justify-between p-3 border border-green-900/50">
                     <div>
                         <h4 className="text-white font-bold">{e.platform}</h4>
                         <p className="text-xs text-green-600">{e.username}</p>

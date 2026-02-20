@@ -10,15 +10,14 @@ export default function GlobalProtections({ children }: { children: React.ReactN
 
         // Disable right-click globally
         document.addEventListener('contextmenu', handleContextMenu);
+        // Disable text selection globally without messing up DOM flex roots
+        document.body.classList.add('select-none');
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
+            document.body.classList.remove('select-none');
         };
     }, []);
 
-    return (
-        <div className="select-none h-full w-full">
-            {children}
-        </div>
-    );
+    return <>{children}</>;
 }
