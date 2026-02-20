@@ -1,14 +1,20 @@
 export default function Loading() {
     return (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black font-mono">
-            <div className="text-green-500 text-sm mb-8 space-y-1 animate-pulse">
-                <p>&gt; Initializing kernel modules...</p>
-                <p>&gt; Loading system configuration...</p>
-                <p>&gt; Establishing secure connection...</p>
-                <p className="text-green-700">&gt; Please wait...</p>
-            </div>
-            <div className="w-48 h-1 bg-green-900/30 overflow-hidden">
-                <div className="h-full bg-green-500 animate-[loading_1.5s_ease-in-out_infinite]" />
+        <div className="min-h-screen flex items-center justify-center bg-black text-green-500 font-mono">
+            <div className="space-y-4 text-center">
+                <div className="text-xl tracking-widest animate-pulse glow-text">
+                    LOADING_SYSTEM
+                </div>
+                <div className="w-64 h-1 bg-green-900/30 mx-auto overflow-hidden">
+                    <div
+                        className="h-full bg-green-500"
+                        style={{ animation: 'loading 2s ease-in-out infinite' }}
+                    />
+                </div>
+                <div className="text-xs text-green-800 space-y-1">
+                    <p>&gt; Initializing modules...</p>
+                    <p>&gt; Establishing connection...</p>
+                </div>
             </div>
         </div>
     );

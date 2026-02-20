@@ -65,6 +65,15 @@ export interface AchievementRow {
     created_at: string;
 }
 
+export interface SocialRow {
+    id: string;
+    platform: string;
+    username: string;
+    url: string;
+    icon?: string;
+    created_at: string;
+}
+
 export interface ProfileRow {
     id: string;
     full_name: string;
@@ -135,6 +144,7 @@ export const experienceRepo = new BaseRepository<ExperienceRow>('experience');
 export const educationRepo = new BaseRepository<EducationRow>('education');
 export const skillsRepo = new BaseRepository<SkillRow>('skills');
 export const achievementsRepo = new BaseRepository<AchievementRow>('achievements');
+export const socialsRepo = new BaseRepository<SocialRow>('socials');
 export const profileRepo = new BaseRepository<ProfileRow>('profile');
 export const visitorsRepo = new BaseRepository<VisitorRow>('visitors');
 export const brandingRepo = new BaseRepository<BrandingConfigRow>('branding_config');

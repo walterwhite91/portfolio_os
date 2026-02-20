@@ -1,8 +1,8 @@
 # Portfolio OS — Full Documentation
 
-> **Last updated:** 2026-02-17  
+> **Last updated:** 2026-02-20  
 > **Author:** Mimansh Neupane Pokharel  
-> **Version:** 0.1.0  
+> **Version:** 1.0.0  
 
 ---
 
@@ -13,7 +13,7 @@
 1. **CLI (Command Line Interface)** — A retro-styled terminal where visitors type commands to navigate.
 2. **GUI (Graphical User Interface)** — A modern, dashboard-style interface with tabs and visual widgets.
 
-Behind the scenes, it includes a **full-featured admin panel**, an **analytics dashboard**, a **setup wizard**, **theme/layout management**, and a **CV import engine** — all secured with session-based authentication, rate limiting, and middleware protection.
+Behind the scenes, it includes a **full-featured admin panel**, an **analytics dashboard**, a **setup wizard**, **theme/layout management**, a **CV import engine**, a **Matrix identity system**, and **production-grade infrastructure** — all secured with session-based authentication, rate limiting, and middleware protection.
 
 ---
 
@@ -25,11 +25,12 @@ Behind the scenes, it includes a **full-featured admin panel**, an **analytics d
 | **Language**       | TypeScript                                                    |
 | **Styling**        | Tailwind CSS v4, `tw-animate-css`                             |
 | **UI Components**  | shadcn/ui (Button, Card, Dialog, Input, Label, Table, Tabs, Textarea, Alert) |
-| **Animations**     | Framer Motion                                                 |
+| **Animations**     | Framer Motion, Canvas-based Matrix rain                       |
 | **Icons**          | Lucide React                                                  |
 | **Charts**         | Recharts                                                      |
 | **Backend / DB**   | Supabase (PostgreSQL + Row Level Security)                    |
 | **Auth**           | Custom HMAC session tokens + bcryptjs + middleware             |
+| **Validation**     | Zod (schema validation for all inputs)                        |
 | **PDF Generation** | Puppeteer + `@sparticuz/chromium` (Vercel-compatible)          |
 | **Font**           | Geist Mono (via `next/font/google`)                           |
 
@@ -37,25 +38,41 @@ Behind the scenes, it includes a **full-featured admin panel**, an **analytics d
 
 ## 3. Architecture Overview
 
-### 3.1 Modular Directory Structure
+### 3.1 Production Architecture
 
-The codebase follows a **modular OS-style architecture** with clear separation of concerns:
+The codebase follows a **layered production architecture** with clear separation:
 
 ```
 portfolio-os/
-├── db/                              # SQL schemas
-│   ├── schema.sql                   # Core tables (projects, experience, education, skills, achievements, profile, socials, resume_versions, visitors)
-│   ├── analytics.sql                # Analytics tables (sessions, command_logs, resume_downloads, audit_logs, cv_versions)
-│   └── visitors.sql                 # Standalone visitors table
+├── db/                              # Combined Production Schema
+│   └── v1.0.0-production-schema.sql # Master initialization script (Tables, RLS, Seed)
 ├── public/                          # Static assets
 ├── src/
-│   ├── admin/                       # Admin panel UI
-│   │   └── AdminPanel.tsx           # Full admin dashboard (1008 lines) — CRUD managers, CV import, theme, layout, analytics
+│   ├── core/                        # Production infrastructure layer
+│   │   ├── services/
+│   │   │   └── index.ts             # Centralized service layer (373 lines) — all business logic
+│   │   ├── repositories/
+│   │   │   ├── base.repository.ts   # Generic Supabase CRUD abstraction (BaseRepository<T>)
+│   │   │   └── index.ts             # Entity repositories + DB row type interfaces
+│   │   ├── validators/
+│   │   │   └── schemas.ts           # Zod schemas for all entity + config inputs
+│   │   ├── errors/
+│   │   │   └── errors.ts            # AppError class + ErrorCode enum + handleApiError()
+│   │   ├── providers/
+│   │   │   ├── ThemeProvider.tsx     # Dynamic theme context + CSS variable injection
+│   │   │   └── ToastProvider.tsx     # Toast notification context + useToast() hook
+│   │   ├── api-response.ts          # Typed API response wrapper (apiSuccess/apiError/apiCatch)
+│   │   └── logger.ts                # Structured logging abstraction (info/warn/error/audit)
+│   ├── admin/
+│   │   └── AdminPanel.tsx           # Full admin dashboard (1158 lines) — CRUD managers, CV import, branding, theme, layout, analytics
 │   ├── app/                         # Next.js App Router
-│   │   ├── layout.tsx               # Root layout (dark mode, scanline overlay, CRT vignette)
+│   │   ├── layout.tsx               # Root layout (ThemeProvider + ToastProvider + SEO)
 │   │   ├── page.tsx                 # Home page — renders Terminal
-│   │   ├── globals.css              # Global styles
-│   │   ├── actions.ts               # Server Actions (data fetching, visitor recording, GitHub API)
+│   │   ├── error.tsx                # Global error boundary ("SYSTEM_FAULT" screen)
+│   │   ├── not-found.tsx            # Custom 404 page ("PATH_NOT_FOUND")
+│   │   ├── loading.tsx              # Root loading state with progress animation
+│   │   ├── globals.css              # Global styles + animations
+│   │   ├── actions.ts               # Server Actions (data fetching, visitor recording)
 │   │   ├── admin/
 │   │   │   └── page.tsx             # Admin route — mounts AdminPanel
 │   │   ├── resume/
@@ -63,8 +80,8 @@ portfolio-os/
 │   │   ├── setup/
 │   │   │   └── page.tsx             # Setup Wizard UI (multi-step form)
 │   │   └── api/                     # API Routes
-│   │       ├── admin/               # Protected admin endpoints
-│   │       │   ├── login/route.ts
+│   │       ├── admin/               # Protected admin endpoints (14 routes)
+│   │       │   ├── login/route.ts   # Auth with Zod validation + audit logging
 │   │       │   ├── logout/route.ts
 │   │       │   ├── session/route.ts
 │   │       │   ├── profile/route.ts
@@ -75,9 +92,11 @@ portfolio-os/
 │   │       │   ├── education/route.ts
 │   │       │   ├── education/[id]/route.ts
 │   │       │   ├── skills/route.ts
-│   │       │   ├── analytics/route.ts
+│   │       │   ├── analytics/route.ts   # Typed aggregate analytics endpoint
 │   │       │   ├── settings/route.ts
-│   │       │   └── cv-import/route.ts
+│   │       │   ├── branding/route.ts    # Branding config (public GET + admin PUT)
+│   │       │   ├── visual/route.ts      # Visual config (public GET + admin PUT)
+│   │       │   └── cv-import/route.ts   # Bulk CV import with per-section error isolation
 │   │       ├── analytics/
 │   │       │   └── track/route.ts   # Public visitor tracking endpoint
 │   │       ├── generate-resume/route.ts
@@ -89,22 +108,23 @@ portfolio-os/
 │   ├── gui/
 │   │   └── GUIInterface.tsx         # Dashboard GUI component (318 lines)
 │   ├── components/
-│   │   ├── VisitorForm.tsx          # Boot-time visitor registration
+│   │   ├── MatrixBackground.tsx     # Canvas-based Matrix rain effect (201 lines)
+│   │   ├── VisitorForm.tsx          # Boot-time visitor registration + Matrix background
+│   │   ├── LoadingSkeleton.tsx      # Skeleton loading components (5 variants)
 │   │   └── ui/                      # shadcn/ui primitives (9 components)
 │   ├── lib/
-│   │   ├── api.ts                   # Hybrid data fetching (Supabase → static fallback)
-│   │   ├── data.ts                  # Static fallback data (profile, projects, experience, education, skills, achievements)
+│   │   ├── data.ts                  # Static fallback data
 │   │   ├── supabase.ts              # Supabase client initialization
 │   │   └── utils.ts                 # Utility helpers (cn, etc.)
 │   ├── modules/
 │   │   └── analytics/
-│   │       └── tracker.ts           # Client-side analytics tracker (session start, commands, resume downloads, page views)
+│   │       └── tracker.ts           # Client-side analytics tracker
 │   ├── security/
-│   │   ├── auth.ts                  # Auth module (bcrypt validation, HMAC session tokens, cookie helpers)
+│   │   ├── auth.ts                  # Auth module (bcrypt + HMAC sessions + cookies)
 │   │   ├── AdminLoginModal.tsx      # Stealth login modal
 │   │   └── rate-limit.ts            # In-memory IP-based rate limiter
 │   ├── types/
-│   │   └── index.ts                 # TypeScript interfaces (Project, Experience, Education, SkillCategory, Achievement, Profile, CommandOutput)
+│   │   └── index.ts                 # TypeScript interfaces (BrandingConfig, VisualConfig, AuditLog, etc.)
 │   └── middleware.ts                # Edge middleware (route protection, security headers)
 ├── .env.example                     # Environment variable template
 ├── .env.local                       # Local environment (gitignored)
@@ -116,6 +136,23 @@ portfolio-os/
 └── eslint.config.mjs
 ```
 
+### 3.2 Data Flow Architecture
+
+```
+UI Components (CLI/GUI/Admin)
+    ↓ Server Actions / API calls
+Service Layer (src/core/services/)
+    ↓ Zod validation
+    ↓ Business logic
+    ↓ Audit logging
+Repository Layer (src/core/repositories/)
+    ↓ BaseRepository<T> CRUD
+Supabase PostgreSQL
+    (or static fallback → src/lib/data.ts)
+```
+
+All data access passes through the **service layer** — no direct Supabase calls in UI components or API routes. Each service validates inputs with Zod, delegates to repositories, and logs audit events.
+
 ---
 
 ## 4. Core Features (Visitor-Facing)
@@ -125,7 +162,7 @@ portfolio-os/
 When a visitor loads the site, the `Terminal` component simulates a Linux-style boot sequence:
 - Progress bars and system check messages (`LOADING_KERNEL`, `MOUNTING_FILESYSTEM`, etc.)
 - Real data connections are established in the background during the boot animation
-- After the boot, the `VisitorForm` appears
+- After the boot, the `VisitorForm` appears with the Matrix background
 
 ### 4.2 Visitor Form
 
@@ -134,17 +171,22 @@ When a visitor loads the site, the `Terminal` component simulates a Linux-style 
 - **Email** (optional)
 - **Mode toggle**: CLI or GUI
 
-The visitor is recorded in Supabase's `visitors` table via a server action. An analytics `session_start` event is also fired through the tracker module.
+Features:
+- **Matrix Background** — Canvas-based falling character animation behind the form
+- **Branding Config** — Background text, color, speed, density loaded from DB
+- **Stealth Admin Detection** — Admin keyword triggers the login modal instead
+
+The visitor is recorded via the service layer. An analytics `session_start` event is also fired.
 
 ### 4.3 Terminal Interface (`src/cli/Terminal.tsx`)
 
 The main CLI component (684 lines). Manages:
-- **Command processing**: A `switch (cmd)` block handles commands like `help`, `about`, `projects`, `experience`, `education`, `skills`, `achievements`, `contact`, `resume`, `speedfetch`, `gui`, `logout`, `clear`.
+- **Command processing**: `help`, `about`, `projects`, `experience`, `education`, `skills`, `achievements`, `contact`, `resume`, `speedfetch`, `gui`, `logout`, `clear`.
 - **Auto-scroll**: Terminal always scrolls to bottom.
 - **Command history**: Arrow keys (`Up`/`Down`) cycle through previous commands.
 - **Tab completion**: Basic auto-complete for known commands.
 - **Analytics integration**: Every command is tracked via `trackCommand()`.
-- **Admin keyword detection**: A hidden keyword (default: `__admin_access__`) triggers the `AdminLoginModal`.
+- **Admin keyword detection**: A hidden keyword triggers the `AdminLoginModal`.
 
 ### 4.4 GUI Interface (`src/gui/GUIInterface.tsx`)
 
@@ -155,297 +197,408 @@ A modern dashboard (318 lines) with sidebar navigation:
 - **Education**: Academic history
 - **Skills**: Categorized skill badges
 - **Contact**: Contact information and social links
-- **Responsive**: Switches to stacked layout on mobile
 
 ### 4.5 PDF Resume Generation
 
 Two-part system:
-1. **`/resume/print`** — A server-rendered page (`ResumePrintPage`) that fetches all data from `lib/api.ts` and renders a clean, printable A4 resume layout (white background, structured sections: Summary, Experience, Projects, Education, Skills, Achievements).
-2. **`/api/generate-resume`** — Launches Puppeteer, navigates to `/resume/print`, generates a PDF buffer, and streams it to the user. Uses `puppeteer` locally and `puppeteer-core` + `@sparticuz/chromium` on Vercel.
+1. **`/resume/print`** — Server-rendered page that fetches all data and renders a clean, printable A4 resume layout.
+2. **`/api/generate-resume`** — Launches Puppeteer, navigates to `/resume/print`, generates a PDF buffer, and streams it. Uses `puppeteer-core` + `@sparticuz/chromium` on Vercel.
 
 ---
 
-## 5. Data Management
+## 5. Matrix Identity System
 
-### 5.1 Hybrid Data Fetching (`src/lib/api.ts`)
+### 5.1 MatrixBackground Component (`src/components/MatrixBackground.tsx`)
 
-Every data function follows the same pattern:
-1. Check if Supabase is configured (`supabase` client is non-null)
-2. If yes → query Supabase
-3. If no (or error) → return static fallback from `src/lib/data.ts`
+A **Canvas-based** Matrix rain effect component (201 lines):
 
-Functions: `getProfile()`, `getProjects()`, `getExperience()`, `getEducation()`, `getSkills()`, `getAchievements()`
+| Feature | Implementation |
+|:--------|:---------------|
+| **Rendering** | HTML5 Canvas with `requestAnimationFrame` loop |
+| **Characters** | Katakana + alphanumeric + special characters |
+| **Background text** | Large typography (e.g. "MIMANSH") at 50% viewport width with glow layers |
+| **Frame rate control** | Speed-based interval throttling |
+| **Memory safety** | Properly cleaned up via effect cleanup (cancelAnimationFrame, removeEventListener) |
+| **Tab pause** | Page Visibility API — pauses when tab is inactive |
+| **Reduced motion** | Respects `prefers-reduced-motion` — shows static text only |
+| **Configurable** | `text`, `color`, `speed`, `density`, `opacity`, `enabled` props |
 
-### 5.2 Server Actions (`src/app/actions.ts`)
+### 5.2 Admin Branding Control
 
-Marked with `'use server'`. Wraps `lib/api.ts` functions for safe server-side invocation:
+The admin panel's **Branding Manager** controls:
+- **Background display name text** (default: "MIMANSH")
+- **Matrix effect enable/disable**
+- **Matrix color** (hex color picker)
+- **Matrix speed** (0.1–5.0)
+- **Matrix density** (0.1–2.0)
+- **Matrix opacity** (0–1)
+- **Background mode** (matrix / minimal / custom)
+
+Changes persist to the `branding_config` table and are loaded by `VisitorForm` on mount.
+
+---
+
+## 6. Data Management
+
+### 6.1 Service Layer (`src/core/services/index.ts`)
+
+The centralized service layer (373 lines) handles all business logic:
+
+| Service | Methods | Description |
+|:--------|:--------|:------------|
+| `projectsService` | `getAll`, `create`, `update`, `delete` | Project CRUD with slug generation |
+| `experienceService` | `getAll`, `create`, `update`, `delete` | Work experience CRUD |
+| `educationService` | `getAll`, `create`, `update`, `delete` | Education CRUD |
+| `skillsService` | `getAll`, `upsert` | Skills with category-based upsert |
+| `achievementsService` | `getAll` | Read-only achievements |
+| `profileService` | `get`, `update` | Singleton profile management |
+| `visitorService` | `record` | Visitor recording |
+| `brandingService` | `get`, `update` | Matrix/branding config management |
+| `visualConfigService` | `get`, `update` | Theme/visual config management |
+| `systemConfigService` | `getAll`, `set` | Legacy key-value config |
+| `auditService` | `log`, `getRecent` | Audit trail logging |
+
+Every write operation:
+1. Validates input with Zod
+2. Delegates to the corresponding repository
+3. Logs the action via `logger.audit()`
+4. Writes to the `audit_logs` table via `auditService`
+
+### 6.2 Repository Pattern (`src/core/repositories/`)
+
+`BaseRepository<T>` provides generic Supabase CRUD:
+- `findAll(orderBy?, ascending?)` — List all rows
+- `findById(id)` — Find by UUID
+- `findSingleton()` — Find single row (for config tables)
+- `create(input)` — Insert new row
+- `update(id, input)` — Update by ID
+- `upsertSingleton(input)` — Update-or-insert for config tables
+- `delete(id)` — Delete by ID
+- `upsert(rows, conflictColumn)` — Bulk upsert
+- `isConfigured` — Check if Supabase is connected
+
+Entity repositories: `projectsRepo`, `experienceRepo`, `educationRepo`, `skillsRepo`, `achievementsRepo`, `profileRepo`, `visitorsRepo`, `brandingRepo`, `visualConfigRepo`, `auditRepo`, `systemConfigRepo`.
+
+### 6.3 Validation (`src/core/validators/schemas.ts`)
+
+Zod schemas for all inputs:
+- `ProjectSchema`, `ExperienceSchema`, `EducationSchema`, `SkillSchema`, `AchievementSchema`, `ProfileSchema`
+- `BrandingConfigSchema`, `VisualConfigSchema`
+- `LoginInputSchema`, `VisitorInputSchema`
+
+Validated types are exported: `ProjectInput`, `ExperienceInput`, etc.
+
+### 6.4 Server Actions (`src/app/actions.ts`)
+
+Marked with `'use server'`. Wraps service layer for safe server-side invocation:
 - `fetchProfile()`, `fetchProjects()`, `fetchExperience()`, `fetchEducation()`, `fetchSkills()`, `fetchAchievements()`
-- `fetchGithubStats()` — Live data from GitHub REST API (`/users/walterwhite91`)
-- `fetchSocialStats()` — Currently mocked (LinkedIn: 500 followers, Instagram: 1200 followers)
-- `recordVisitor(name, email?)` — Inserts into Supabase `visitors` table
+- `fetchGithubStats()` — Live data from GitHub REST API
+- `fetchSocialStats()` — Currently mocked
+- `recordVisitor(name, email?)` — Records via service layer
+- `fetchBrandingConfig()`, `fetchVisualConfig()` — Config for frontend theming
 - `checkAdminKeyword(input)` — Validates admin keyword for stealth access
 
-### 5.3 Static Fallback Data (`src/lib/data.ts`)
+### 6.5 Static Fallback Data (`src/lib/data.ts`)
 
-Pre-populated with real information:
+Pre-populated with real information for operation without Supabase:
 - **Profile**: Mimansh Neupane Pokharel, CS Student & System Architect
-- **Skills**: 8 categories (Programming, Database, Web & Backend, AI & Tools, Dev Tools, Design, Networking & Linux, Soft Skills)
+- **Skills**: 8 categories
 - **Projects**: Ask-M, Healthcare DBMS, Linux Network Projects
 - **Experience**: Blueprint Marketing, Tears of Happiness
-- **Education**: Kathmandu University (B.Sc. CS), British Grammar School (+2 Science)
+- **Education**: Kathmandu University, British Grammar School
 - **Achievements**: KU Computer Club, IT Meet 2025, Aavishkar 25, Namaste Creative Fest
 
-### 5.4 Supabase Client (`src/lib/supabase.ts`)
+---
 
-Conditionally creates a Supabase client only if both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set. Returns `null` otherwise, enabling the fallback-first approach.
+## 7. Database Schema
+
+Initialize your database by running `db/v1.0.0-production-schema.sql` in the Supabase SQL Editor.
+
+| Table              | Key Columns | Notes |
+| :----------------- | :---------- | :---- |
+| `projects` | id (UUID), title, slug (unique), description, tech_stack[], role, repo_url, live_url, is_featured, image_url | Ordered by `start_date` descending |
+| `experience` | id (UUID), company, role, start_date, end_date, description, skills_used[], location, type | |
+| `education` | id (UUID), institution, degree, field_of_study, start_date, end_date, grade, activities | |
+| `skills` | id (UUID), category (unique), items[] | Ordered by `category` |
+| `achievements` | id (UUID), title, organization, date, description, url | |
+| `profile` | id (UUID), full_name, headline, bio, email, location, avatar_url, website_url, custom_css | Singleton |
+| `socials` | id (UUID), platform, username, url, icon | |
+| `resume_versions` | id (UUID), version_number, file_url, changelog | |
+| `visitors` | id (UUID), name, email, created_at | |
+
+### 7.2 Analytics Tables (`db/analytics.sql`)
+
+| Table | Key Columns | Notes |
+| :---- | :---------- | :---- |
+| `sessions` | id (UUID), visitor_name, mode, started_at, ended_at, page_views | Public INSERT |
+| `command_logs` | id (UUID), session_id (FK), command, created_at | Public INSERT |
+| `resume_downloads` | id (UUID), session_id (FK), created_at | Public INSERT |
+| `audit_logs` | id (UUID), action, admin_username, change_summary, ip_address, details (JSONB), created_at | Admin-only |
+| `cv_versions` | id (UUID), version_number, data (JSONB), applied_at, applied_by | CV import history |
+
+### 7.3 Config Tables (`db/migration-002-config-tables.sql`)
+
+| Table | Key Columns | Notes |
+| :---- | :---------- | :---- |
+| `branding_config` | id, display_name, background_name_text, matrix_enabled, matrix_speed, matrix_density, matrix_color, matrix_opacity, background_mode | Singleton |
+| `visual_config` | id, terminal_color, accent_color, font_family, dark_mode, ascii_header, boot_enabled, visitor_form_enabled, default_mode | Singleton |
+
+All tables have UUID primary keys, RLS enabled, public SELECT, authenticated-only INSERT/UPDATE/DELETE.
 
 ---
 
-## 6. Database Schema
+## 8. Security System
 
-### 6.1 Core Tables (`db/schema.sql`)
-
-| Table              | Key Columns                                                            | Notes                              |
-| :----------------- | :--------------------------------------------------------------------- | :--------------------------------- |
-| `projects`         | id (UUID), title, slug (unique), description, tech_stack[], role, repo_url, live_url, is_featured, image_url | Ordered by `start_date` descending |
-| `experience`       | id (UUID), company, role, start_date, end_date (nullable = Present), description, skills_used[], location, type (enum) | |
-| `education`        | id (UUID), institution, degree, field_of_study, start_date, end_date, grade, activities | |
-| `skills`           | id (UUID), category (unique), items[]                                  | Ordered by `category`              |
-| `achievements`     | id (UUID), title, organization, date, description, url                 | |
-| `profile`          | id (UUID), full_name, headline, bio, email, location, avatar_url, website_url, custom_css (JSONB) | Singleton pattern                  |
-| `socials`          | id (UUID), platform, username, url, icon                               | |
-| `resume_versions`  | id (UUID), version_number, file_url, changelog                         | |
-| `visitors`         | id (UUID), name, email, created_at                                     | |
-
-All tables have:
-- UUID primary keys via `uuid_generate_v4()`
-- Row Level Security (RLS) enabled
-- Public `SELECT` policies
-- Authenticated-only `INSERT`/`UPDATE`/`DELETE` policies
-
-Seed data is included in the SQL for initial population.
-
-### 6.2 Analytics Tables (`db/analytics.sql`)
-
-| Table              | Key Columns                                                     | Notes                          |
-| :----------------- | :-------------------------------------------------------------- | :----------------------------- |
-| `sessions`         | id (UUID), visitor_name, mode ('cli'/'gui'), started_at, ended_at, page_views | Public INSERT                  |
-| `command_logs`     | id (UUID), session_id (FK → sessions), command, created_at      | Public INSERT, FK cascade      |
-| `resume_downloads` | id (UUID), session_id (FK → sessions), created_at               | Public INSERT                  |
-| `audit_logs`       | id (UUID), action, ip_address, details (JSONB), created_at      | Admin-only                     |
-| `cv_versions`      | id (UUID), version_number (SERIAL), data (JSONB), applied_at, applied_by | Tracks CV import history       |
-
----
-
-## 7. Security System
-
-### 7.1 Authentication (`src/security/auth.ts`)
+### 8.1 Authentication (`src/security/auth.ts`)
 
 - **Credential Validation**: `bcryptjs` comparison with constant-time fake comparison on username mismatch (prevents timing attacks)
 - **Session Tokens**: Custom HMAC-SHA256 signed tokens: `base64(payload).signature`
   - Payload: `{ username, createdAt, expiresAt }`
   - Configurable expiry via `SESSION_EXPIRY_HOURS` (default: 2 hours)
-- **Cookie Management**: HttpOnly, Secure (in production), SameSite=Strict
-- **Password Hashing**: bcrypt with 12 salt rounds
-- **Admin Keyword**: Hidden keyword for stealth access from the terminal
+- **Cookie Management**: HttpOnly, Secure (production), SameSite=Strict
+- **Login Validation**: Zod schema validation on all login inputs
+- **Audit Logging**: Both successful and failed login attempts are logged
 
-### 7.2 Middleware (`src/middleware.ts`)
+### 8.2 Middleware (`src/middleware.ts`)
 
 Runs on Edge Runtime. Matches routes: `/admin/*`, `/api/admin/*`.
 
-- **Protected paths**: `/admin`, `/api/admin` — require a valid session cookie
+- **Protected paths**: `/admin`, `/api/admin` — require valid session cookie
 - **Excluded paths**: `/api/admin/login` — allows unauthenticated access
-- **Unauthenticated visitors** hitting `/admin` are silently redirected to `/` (no login page exposed)
-- **Unauthenticated API calls** to `/api/admin/*` return `401 Unauthorized`
-- **Security headers** added to every matched response:
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `X-XSS-Protection: 1; mode=block`
-  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- **Unauthenticated visitors** hitting `/admin` → silently redirected to `/`
+- **Unauthenticated API calls** → `401 Unauthorized`
+- **Security headers**: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `X-XSS-Protection`, `Permissions-Policy`
 
-> **Note**: The middleware file uses the now-deprecated `middleware` convention. Next.js 16 recommends migrating to `proxy`. This is non-blocking.
-
-### 7.3 Rate Limiting (`src/security/rate-limit.ts`)
+### 8.3 Rate Limiting (`src/security/rate-limit.ts`)
 
 In-memory IP-based rate limiter:
 - **Max attempts**: 5 within 15-minute window
-- **Auto-cleanup**: Every 30 minutes, expired entries are purged
+- **Auto-cleanup**: Every 30 minutes
 - **Resets** on successful login
 
-### 7.4 Stealth Admin Access Flow
+### 8.4 Stealth Admin Access Flow
 
-1. Visitor types the admin keyword (e.g., `__admin_access__`) in the terminal
+1. Visitor types admin keyword in the terminal
 2. `checkAdminKeyword()` server action validates it
-3. `AdminLoginModal` appears — styled to match the hacker aesthetic
-4. Login form POSTs to `/api/admin/login` (rate-limited)
-5. On success → session cookie is set → redirect to `/admin`
-6. On failure → silent reset (no error messages shown)
+3. `AdminLoginModal` appears — Matrix background shown
+4. Login form POSTs to `/api/admin/login` (rate-limited, Zod-validated)
+5. On success → session cookie → redirect to `/admin`
+6. On failure → audit log entry → silent reset
 
 ---
 
-## 8. Admin Panel (`src/admin/AdminPanel.tsx`)
+## 9. Admin Panel (`src/admin/AdminPanel.tsx`)
 
-A comprehensive 1008-line admin dashboard with tabbed navigation:
+A comprehensive 1158-line admin dashboard with tabbed navigation:
 
-### 8.1 Content Managers
+### 9.1 Content Managers
 
-Each manager uses a **generic `useAdminData` hook** that handles fetching, loading states, and error handling.
+Each manager uses a generic `useAdminData` hook for fetching, loading, and error handling.
 
-| Tab              | Component           | API Endpoint                    | Capabilities                              |
-| :--------------- | :------------------ | :------------------------------ | :---------------------------------------- |
-| **Profile**      | `ProfileManager`    | `/api/admin/profile`            | View/edit singleton profile (PUT)         |
-| **Projects**     | `ProjectsManager`   | `/api/admin/projects`, `/api/admin/projects/[id]` | List, create (POST), update (PUT), delete (DELETE) |
-| **Experience**   | `ExperienceManager` | `/api/admin/experience`, `/api/admin/experience/[id]` | List, create, update, delete              |
-| **Education**    | `EducationManager`  | `/api/admin/education`, `/api/admin/education/[id]`   | List, create, update, delete              |
-| **Skills**       | `SkillsManager`     | `/api/admin/skills`             | List, create (POST), update (PUT) with batch support |
+| Tab | API Endpoint | Capabilities |
+| :-- | :----------- | :----------- |
+| **Profile** | `/api/admin/profile` | View/edit singleton profile |
+| **Projects** | `/api/admin/projects` | List, create, update, delete |
+| **Experience** | `/api/admin/experience` | List, create, update, delete |
+| **Education** | `/api/admin/education` | List, create, update, delete |
+| **Skills** | `/api/admin/skills` | List, create, update (batch) |
 
-Each manager has dedicated form components (`ProjectForm`, `SkillForm`, `GenericForm`) with proper validation.
+### 9.2 CV Import Engine
 
-### 8.2 CV Import Engine
+- AI-prompted JSON extraction from CV
+- Paste AI-generated JSON → parse → validate → apply to all tables
+- **Per-section error isolation**: if one section fails, remaining sections still apply
+- Version snapshot saved to `cv_versions`
+- Audit logged with error summary
 
-- Provides a pre-crafted AI prompt (`CV_PROMPT`) for extracting structured data from a CV
-- "Copy Prompt" button for clipboard
-- Paste the AI-generated JSON output into a textarea
-- Parses and validates the JSON structure
-- Applies data to all Supabase tables in one operation via `/api/admin/cv-import`
-- Saves a version snapshot to `cv_versions` table
+### 9.3 Branding Manager
 
-### 8.3 Theme Manager
+Controls the Matrix identity system:
+- Background display name text
+- Matrix effect enable/disable
+- Matrix color, speed, density, opacity
+- Background mode (matrix / minimal / custom)
+- Persists to `branding_config` table via `/api/admin/branding`
 
-Manages visual customization:
+### 9.4 Theme Manager
+
+Visual customization:
 - **Color Presets**: Matrix (green), Ocean (blue), Sunset (orange), Violet, Ghost (gray)
-- **Custom Colors**: Terminal color picker, accent color picker
+- **Custom Colors**: Terminal + accent color pickers
 - **Font Selection**: JetBrains Mono, Fira Code, Source Code Pro, IBM Plex Mono, Courier New
-- Persists settings to Supabase `system_config` table via `/api/admin/settings`
+- Persists to `visual_config` table via `/api/admin/visual`
 
-### 8.4 Layout Control
+### 9.5 Layout Control
 
-Controls structural behavior:
-- **ASCII Header text** customization
-- **Dark mode** toggle
-- **Default mode** selection (CLI vs GUI)
-- **Boot sequence** toggle (show/hide)
-- **Visitor form** toggle (show/hide)
+Structural behavior:
+- ASCII Header text customization
+- Dark mode toggle
+- Default mode selection (CLI vs GUI)
+- Boot sequence toggle
+- Visitor form toggle
 - Persists via `/api/admin/settings`
 
-### 8.5 Analytics Dashboard
+### 9.6 Analytics Dashboard
 
-Displays aggregated visitor analytics:
-- **Stat cards**: Total visits, unique sessions, resume downloads
-- **CLI vs GUI split**: Percentage breakdown with visual bar
-- **Top commands**: Most-used CLI commands with counts
-- **Visits by day**: Line chart (last 30 days) via Recharts
-- **Recent sessions**: Table of last 20 visitor sessions
-- Data fetched from `/api/admin/analytics` (aggregates from `sessions`, `command_logs`, `resume_downloads` tables)
-
----
-
-## 9. Analytics Tracking (`src/modules/analytics/tracker.ts`)
-
-Client-side tracking module. Fires events to `/api/analytics/track` (public endpoint, no auth):
-
-| Function               | Event             | Data Sent                          |
-| :--------------------- | :---------------- | :--------------------------------- |
-| `trackSessionStart()`  | `session_start`   | visitor_name, mode                 |
-| `trackCommand()`       | `command`         | session_id, command string         |
-| `trackResumeDownload()`| `resume_download` | session_id                         |
-| `trackPageView()`      | `page_view`       | session_id                         |
-
-A `sessionId` is assigned on `session_start` and stored in module-level state for subsequent events.
+Aggregated visitor analytics:
+- Stat cards: Total visits, unique sessions, resume downloads
+- CLI vs GUI split percentage
+- Top commands with counts
+- Visits by day line chart (last 30 days via Recharts)
+- Recent sessions table
 
 ---
 
-## 10. Setup Wizard (`/setup`)
+## 10. Production Infrastructure
 
-A multi-step first-run wizard (`src/app/setup/page.tsx`, 275 lines):
+### 10.1 Error Handling
 
-### Steps:
-1. **Welcome** — Introduction screen
-2. **Admin Credentials** — Username + password (min 8 chars) + admin keyword
-3. **Database** — Optional Supabase URL + Anon Key
-4. **Review** — Summary of all inputs
-5. **Initialize** — POSTs to `/api/setup`
+| Layer | Component | Description |
+|:------|:----------|:------------|
+| **Global** | `src/app/error.tsx` | Error boundary — "SYSTEM_FAULT" screen with retry/reboot |
+| **404** | `src/app/not-found.tsx` | "PATH_NOT_FOUND" terminal page |
+| **Loading** | `src/app/loading.tsx` | Root loading state with progress animation |
+| **API** | `src/core/errors/errors.ts` | `AppError` class with typed error codes |
+| **API** | `src/core/api-response.ts` | `apiSuccess()`, `apiError()`, `apiCatch()` wrappers |
 
-### What `/api/setup` does:
-1. Checks if already initialized (marker file `.initialized` or Supabase `system_config` table)
-2. Hashes the password (bcrypt, 12 rounds)
-3. Generates a random `SESSION_SECRET` (32-byte hex)
-4. Writes config to Supabase `system_config` table (if available)
-5. Writes config to `.env.local` (if filesystem writable)
-6. Creates `.initialized` marker file
+### 10.2 Toast Notification System
 
-### Status Check (`/api/setup/status`):
-Checks three sources: `.initialized` file → env vars → Supabase `system_config` table.
-
----
-
-## 11. API Routes Summary
-
-### Public Endpoints (No Auth)
-| Method | Route                       | Description                              |
-| :----- | :-------------------------- | :--------------------------------------- |
-| GET    | `/`                         | Main portfolio page (Terminal)           |
-| GET    | `/resume/print`             | Printable resume (server-rendered HTML)  |
-| GET    | `/api/generate-resume`      | PDF resume generation via Puppeteer      |
-| POST   | `/api/analytics/track`      | Visitor analytics event tracking         |
-| GET    | `/api/setup/status`         | Check initialization status              |
-| POST   | `/api/setup`                | First-run system initialization          |
-| POST   | `/api/admin/login`          | Admin authentication                     |
-
-### Protected Endpoints (Session Cookie Required)
-| Method    | Route                           | Description                         |
-| :-------- | :------------------------------ | :---------------------------------- |
-| GET       | `/admin`                        | Admin panel page                    |
-| GET/PUT   | `/api/admin/profile`            | Fetch/update profile                |
-| GET/POST  | `/api/admin/projects`           | List/create projects                |
-| PUT/DELETE| `/api/admin/projects/[id]`      | Update/delete a project             |
-| GET/POST  | `/api/admin/experience`         | List/create experience entries      |
-| PUT/DELETE| `/api/admin/experience/[id]`    | Update/delete an experience entry   |
-| GET/POST  | `/api/admin/education`          | List/create education entries       |
-| PUT/DELETE| `/api/admin/education/[id]`     | Update/delete an education entry    |
-| GET/POST/PUT | `/api/admin/skills`          | List/create/update skill categories |
-| GET       | `/api/admin/analytics`          | Aggregated analytics data           |
-| GET/PUT   | `/api/admin/settings`           | Theme & layout settings             |
-| POST      | `/api/admin/cv-import`          | Bulk import CV data                 |
-| POST      | `/api/admin/logout`             | Clear session cookie                |
-| GET       | `/api/admin/session`            | Verify current session              |
-
----
-
-## 12. UI Components (`src/components/ui/`)
-
-Built with **shadcn/ui** (via `components.json`):
-
-| Component      | File           | Usage                                   |
-| :------------- | :------------- | :-------------------------------------- |
-| `Button`       | `button.tsx`   | Admin panel actions, forms              |
-| `Card`         | `card.tsx`     | Stats, manager containers               |
-| `Dialog`       | `dialog.tsx`   | Modals                                  |
-| `Input`        | `input.tsx`    | Form fields                             |
-| `Label`        | `label.tsx`    | Form labels                             |
-| `Table`        | `table.tsx`    | Analytics session list                  |
-| `Tabs`         | `tabs.tsx`     | Admin panel navigation, GUI sections    |
-| `Textarea`     | `textarea.tsx` | CV import, description fields           |
-| `Alert`        | `alert.tsx`    | Status messages                         |
-
----
-
-## 13. TypeScript Types (`src/types/index.ts`)
+`ToastProvider` (`src/core/providers/ToastProvider.tsx`) provides a `useToast()` hook:
 
 ```typescript
-interface Project       // id, title, slug, description, tech_stack[], role, repo_url, live_url, start_date, end_date, is_featured, image_url, created_at
-interface Experience    // id, company, role, start_date, end_date, description, skills_used[], location, type (enum)
-interface Education     // id, institution, degree, field_of_study, start_date, end_date, grade, description, activities
-interface SkillCategory // id, category, items[]
-interface Achievement   // id, title, organization, date, description, url
-interface Profile       // full_name, headline, bio, email, location, website_url, avatar_url, custom_css
-interface CommandOutput // id, command, output (ReactNode), timestamp
+const { success, error, info, warning } = useToast();
+success('Configuration saved');
+error('Failed to update');
+```
+
+Features: auto-dismiss, max 5 stacked, click to dismiss, type-based styling (green/red/cyan/yellow).
+
+### 10.3 Loading Skeletons
+
+`LoadingSkeleton` (`src/components/LoadingSkeleton.tsx`) with variants:
+- `text`, `card`, `row`, `circle`, `block`
+- Presets: `CardSkeleton`, `TableSkeleton`
+
+### 10.4 Dynamic Theme Injection
+
+`ThemeProvider` (`src/core/providers/ThemeProvider.tsx`):
+1. Loads `visual_config` + `branding_config` from API on mount
+2. Injects CSS custom properties: `--terminal-color`, `--accent-color`, `--font-family`
+3. Provides `useTheme()` + `useBranding()` hooks
+4. Supports `refreshTheme()` for live updates after admin changes
+
+### 10.5 Structured Logging
+
+`logger` (`src/core/logger.ts`) with levels: `info`, `warn`, `error`, `audit`. Structured JSON output. Ready to swap with external service (Datadog, Sentry, etc.).
+
+### 10.6 Audit Logging
+
+`auditService` logs all admin actions to the `audit_logs` table:
+- Entity CRUD (create, update, delete)
+- Branding and visual config changes
+- CV imports (with error summary)
+- Login attempts (success + failure with IP)
+
+---
+
+## 11. Analytics Tracking (`src/modules/analytics/tracker.ts`)
+
+Client-side tracking module. Fires events to `/api/analytics/track`:
+
+| Function | Event | Data Sent |
+| :------- | :---- | :-------- |
+| `trackSessionStart()` | `session_start` | visitor_name, mode |
+| `trackCommand()` | `command` | session_id, command string |
+| `trackResumeDownload()` | `resume_download` | session_id |
+| `trackPageView()` | `page_view` | session_id |
+
+---
+
+## 12. Setup Wizard (`/setup`)
+
+Multi-step first-run wizard (275 lines):
+
+1. **Welcome** — Introduction
+2. **Admin Credentials** — Username + password (min 8 chars) + admin keyword
+3. **Database** — Optional Supabase URL + Anon Key
+4. **Review** — Summary
+5. **Initialize** — Creates config, hashes password, generates SESSION_SECRET
+
+---
+
+## 13. API Routes Summary
+
+### Public Endpoints (No Auth)
+| Method | Route | Description |
+| :----- | :---- | :---------- |
+| GET | `/` | Main portfolio page |
+| GET | `/resume/print` | Printable resume |
+| GET | `/api/generate-resume` | PDF resume generation |
+| POST | `/api/analytics/track` | Visitor event tracking |
+| GET | `/api/setup/status` | Check initialization status |
+| POST | `/api/setup` | First-run initialization |
+| POST | `/api/admin/login` | Admin authentication (rate-limited, Zod-validated) |
+| GET | `/api/admin/branding` | Public branding config read |
+| GET | `/api/admin/visual` | Public visual config read |
+
+### Protected Endpoints (Session Cookie Required)
+| Method | Route | Description |
+| :----- | :---- | :---------- |
+| GET | `/admin` | Admin panel page |
+| GET/PUT | `/api/admin/profile` | Profile management |
+| GET/POST | `/api/admin/projects` | Project CRUD |
+| PUT/DELETE | `/api/admin/projects/[id]` | Project by ID |
+| GET/POST | `/api/admin/experience` | Experience CRUD |
+| PUT/DELETE | `/api/admin/experience/[id]` | Experience by ID |
+| GET/POST | `/api/admin/education` | Education CRUD |
+| PUT/DELETE | `/api/admin/education/[id]` | Education by ID |
+| GET/POST/PUT | `/api/admin/skills` | Skills management |
+| GET | `/api/admin/analytics` | Aggregated analytics (typed response) |
+| GET/PUT | `/api/admin/settings` | Visual settings (legacy compat) |
+| PUT | `/api/admin/branding` | Update branding config |
+| PUT | `/api/admin/visual` | Update visual config |
+| POST | `/api/admin/cv-import` | Bulk CV import (error-isolated) |
+| POST | `/api/admin/logout` | Clear session |
+| GET | `/api/admin/session` | Verify session |
+
+---
+
+## 14. UI Components (`src/components/ui/`)
+
+Built with **shadcn/ui**:
+
+| Component | Usage |
+| :-------- | :---- |
+| `Button` | Admin panel actions, forms |
+| `Card` | Stats, manager containers |
+| `Dialog` | Modals |
+| `Input` | Form fields |
+| `Label` | Form labels |
+| `Table` | Analytics session list |
+| `Tabs` | Admin navigation, GUI sections |
+| `Textarea` | CV import, description fields |
+| `Alert` | Status messages |
+
+---
+
+## 15. TypeScript Types (`src/types/index.ts`)
+
+```typescript
+interface Project         // id, title, slug, description, tech_stack[], role, repo_url, live_url, ...
+interface Experience      // id, company, role, start_date, end_date, description, skills_used[], ...
+interface Education       // id, institution, degree, field_of_study, ...
+interface SkillCategory   // id, category, items[]
+interface Achievement     // id, title, organization, date, description, url
+interface Profile         // full_name, headline, bio, email, location, ...
+interface CommandOutput   // id, command, output (ReactNode), timestamp
+interface BrandingConfig  // id, display_name, background_name_text, matrix_enabled, matrix_speed, ...
+interface VisualConfig    // id, terminal_color, accent_color, font_family, dark_mode, ...
+interface AuditLog        // id, action, admin_username, change_summary, ip_address, details, ...
 ```
 
 ---
 
-## 14. Environment Variables
+## 16. Environment Variables
 
 ```env
 # Supabase (optional — falls back to static data if not set)
@@ -464,40 +617,39 @@ SESSION_EXPIRY_HOURS=2
 
 ---
 
-## 15. Visual Design
+## 17. Visual Design
 
 ### Root Layout (`layout.tsx`)
 - **Font**: Geist Mono (monospace)
-- **Background**: Pure black (`bg-black`)
-- **Text**: Green-500 (terminal green)
-- **Overlays**: Two layered overlays for CRT/retro effect:
-  1. Scanline overlay (`mix-blend-overlay`, 20% opacity)
-  2. Radial vignette gradient (dark edges, transparent center)
-- **Class**: `dark` mode enabled on `<html>`
+- **Background**: Pure black
+- **Text**: Green-500 (terminal green) — dynamically overridable via ThemeProvider
+- **Overlays**: Scanline + radial vignette for CRT effect
+- **Providers**: ThemeProvider → ToastProvider → children
+- **SEO**: Open Graph, meta description, keywords, robots
 
 ### Theme Presets (Admin Configurable)
-| Preset  | Terminal Color | Accent Color |
-| :------ | :------------ | :----------- |
-| Matrix  | `#22c55e`     | `#06b6d4`    |
-| Ocean   | `#0ea5e9`     | `#8b5cf6`    |
-| Sunset  | `#f97316`     | `#ef4444`    |
-| Violet  | `#a855f7`     | `#ec4899`    |
-| Ghost   | `#6b7280`     | `#9ca3af`    |
+| Preset | Terminal Color | Accent Color |
+| :----- | :------------- | :----------- |
+| Matrix | `#22c55e` | `#06b6d4` |
+| Ocean | `#0ea5e9` | `#8b5cf6` |
+| Sunset | `#f97316` | `#ef4444` |
+| Violet | `#a855f7` | `#ec4899` |
+| Ghost | `#6b7280` | `#9ca3af` |
 
 ---
 
-## 16. Deployment
+## 18. Deployment
 
 ### Vercel (Recommended)
 1. Push code to GitHub
 2. Import project in Vercel
-3. Add environment variables (see Section 14)
+3. Add environment variables (see Section 16)
 4. Deploy
 
 **Notes**:
-- PDF generation uses `puppeteer-core` + `@sparticuz/chromium` to fit Vercel's 50MB serverless limit
-- `maxDuration = 60` is set on the resume endpoint for longer execution
-- The Setup Wizard writes `.env.local` locally but uses `system_config` table on Vercel (read-only filesystem)
+- PDF generation uses `puppeteer-core` + `@sparticuz/chromium` (50MB serverless limit)
+- `maxDuration = 60` on the resume endpoint
+- Setup Wizard uses `system_config` table on Vercel (read-only filesystem)
 
 ### Local Development
 ```bash
@@ -510,29 +662,36 @@ npm run dev                   # Starts at http://localhost:3000
 
 ---
 
-## 17. Development Phases Completed
+## 19. Development Phases
 
-| Phase | Feature                    | Status      | Key Files                                            |
-| :---- | :------------------------- | :---------- | :--------------------------------------------------- |
-| 1     | Core Portfolio (CLI + GUI) | ✅ Complete | `Terminal.tsx`, `GUIInterface.tsx`, `VisitorForm.tsx` |
-| 2     | Modular OS Architecture    | ✅ Complete | `src/cli/`, `src/gui/`, `src/admin/`, `src/security/`, `src/modules/` |
-| 3     | Admin Panel + Security     | ✅ Complete | `AdminPanel.tsx`, `auth.ts`, `middleware.ts`, `rate-limit.ts`, all `/api/admin/*` routes |
-| 4     | Analytics Dashboard        | ✅ Complete | `tracker.ts`, `/api/analytics/track`, `/api/admin/analytics`, `AnalyticsDashboard` component |
-| 5     | CV Import Engine           | ✅ Complete | `CVImportEngine` (in AdminPanel), `/api/admin/cv-import` |
-| 6     | Setup Wizard               | ✅ Complete | `/setup/page.tsx`, `/api/setup`, `/api/setup/status` |
-| 7     | Theme Manager              | ✅ Complete | `ThemeManager` (in AdminPanel), `/api/admin/settings` |
-| 8     | Layout Control             | ✅ Complete | `LayoutControl` (in AdminPanel), `/api/admin/settings` |
-| 9     | PDF Resume                 | ✅ Complete | `/resume/print`, `/api/generate-resume`              |
-| 10    | Database Schema + RLS      | ✅ Complete | `db/schema.sql`, `db/analytics.sql`                  |
+| Phase | Feature | Status |
+| :---- | :------ | :----- |
+| 1 | Core Portfolio (CLI + GUI) | ✅ Complete |
+| 2 | Modular OS Architecture | ✅ Complete |
+| 3 | Admin Panel + Security | ✅ Complete |
+| 4 | Analytics Dashboard | ✅ Complete |
+| 5 | CV Import Engine | ✅ Complete |
+| 6 | Setup Wizard | ✅ Complete |
+| 7 | Theme Manager | ✅ Complete |
+| 8 | Layout Control | ✅ Complete |
+| 9 | PDF Resume | ✅ Complete |
+| 10 | Database Schema + RLS | ✅ Complete |
+| 11 | Service Layer Architecture | ✅ v1.0 |
+| 12 | Repository Pattern + Zod Validation | ✅ v1.0 |
+| 13 | Matrix Identity System | ✅ v1.0 |
+| 14 | Branding Manager | ✅ v1.0 |
+| 15 | Dynamic Theme Injection | ✅ v1.0 |
+| 16 | Production Hardening (Error Boundary, Toast, Skeletons, 404) | ✅ v1.0 |
+| 17 | Audit Logging System | ✅ v1.0 |
+| 18 | API Route Upgrades (Typed Responses, Zod) | ✅ v1.0 |
 
 ---
 
-## 18. Known Issues / Notes
+## 20. Known Issues / Notes
 
 1. **Middleware deprecation warning**: Next.js 16 shows a warning about the `middleware` file convention being deprecated in favor of `proxy`. The current middleware still works fine.
-2. **Social stats are mocked**: `fetchSocialStats()` returns hardcoded numbers. Real implementation would require LinkedIn/Instagram APIs or scraping.
-3. **Theme application**: The Theme Manager saves settings to the database, but the frontend doesn't yet dynamically apply the theme from the DB settings at runtime (currently uses hardcoded CSS vars).
-4. **Supabase is optional**: The entire app works without Supabase configured — it falls back to static data from `data.ts`. The admin panel's write operations require Supabase to be connected.
+2. **Social stats are mocked**: `fetchSocialStats()` returns hardcoded numbers.
+3. **Supabase is optional**: The entire app works without Supabase — falls back to static data. Admin write operations require Supabase.
 
 ---
 

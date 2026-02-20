@@ -7,38 +7,38 @@ import { z } from 'zod';
 
 export const ProjectSchema = z.object({
     title: z.string().min(1, 'Title is required').max(200),
-    slug: z.string().max(200).optional(),
+    slug: z.string().max(200).nullable().optional().or(z.literal('')),
     description: z.string().min(1, 'Description is required').max(5000),
     tech_stack: z.array(z.string().max(100)).default([]),
-    role: z.string().max(100).optional(),
-    repo_url: z.string().url().max(500).optional().or(z.literal('')),
-    live_url: z.string().url().max(500).optional().or(z.literal('')),
-    start_date: z.string().optional(),
-    end_date: z.string().optional(),
+    role: z.string().max(100).nullable().optional().or(z.literal('')),
+    repo_url: z.string().url().max(500).nullable().optional().or(z.literal('')),
+    live_url: z.string().url().max(500).nullable().optional().or(z.literal('')),
+    start_date: z.string().nullable().optional().or(z.literal('')),
+    end_date: z.string().nullable().optional().or(z.literal('')),
     is_featured: z.boolean().default(false),
-    image_url: z.string().url().max(500).optional().or(z.literal('')),
+    image_url: z.string().url().max(500).nullable().optional().or(z.literal('')),
 });
 
 export const ExperienceSchema = z.object({
     company: z.string().min(1, 'Company is required').max(200),
     role: z.string().min(1, 'Role is required').max(200),
     start_date: z.string().min(1, 'Start date is required'),
-    end_date: z.string().nullable().optional(),
+    end_date: z.string().nullable().optional().or(z.literal('')),
     description: z.string().min(1, 'Description is required').max(5000),
     skills_used: z.array(z.string().max(100)).default([]),
-    location: z.string().max(200).optional(),
-    type: z.enum(['full-time', 'part-time', 'contract', 'freelance', 'internship']).optional(),
+    location: z.string().max(200).nullable().optional().or(z.literal('')),
+    type: z.enum(['full-time', 'part-time', 'contract', 'freelance', 'internship']).nullable().optional().or(z.literal('')),
 });
 
 export const EducationSchema = z.object({
     institution: z.string().min(1, 'Institution is required').max(200),
     degree: z.string().min(1, 'Degree is required').max(200),
-    field_of_study: z.string().max(200).optional(),
+    field_of_study: z.string().max(200).nullable().optional().or(z.literal('')),
     start_date: z.string().min(1, 'Start date is required'),
-    end_date: z.string().optional(),
-    grade: z.string().max(50).optional(),
-    description: z.string().max(2000).optional(),
-    activities: z.string().max(2000).optional(),
+    end_date: z.string().nullable().optional().or(z.literal('')),
+    grade: z.string().max(50).nullable().optional().or(z.literal('')),
+    description: z.string().max(2000).nullable().optional().or(z.literal('')),
+    activities: z.string().max(2000).nullable().optional().or(z.literal('')),
 });
 
 export const SkillSchema = z.object({
@@ -48,20 +48,27 @@ export const SkillSchema = z.object({
 
 export const AchievementSchema = z.object({
     title: z.string().min(1, 'Title is required').max(200),
-    organization: z.string().max(200).optional(),
+    organization: z.string().max(200).nullable().optional().or(z.literal('')),
     date: z.string().min(1, 'Date is required'),
-    description: z.string().max(2000).optional(),
-    url: z.string().url().max(500).optional().or(z.literal('')),
+    description: z.string().max(2000).nullable().optional().or(z.literal('')),
+    url: z.string().url().max(500).nullable().optional().or(z.literal('')),
 });
 
 export const ProfileSchema = z.object({
     full_name: z.string().min(1, 'Full name is required').max(200),
-    headline: z.string().max(300).optional(),
-    bio: z.string().max(5000).optional(),
-    email: z.string().email().max(200).optional(),
-    location: z.string().max(200).optional(),
-    website_url: z.string().url().max(500).optional().or(z.literal('')),
-    avatar_url: z.string().url().max(500).optional().or(z.literal('')),
+    headline: z.string().max(300).nullable().optional().or(z.literal('')),
+    bio: z.string().max(5000).nullable().optional().or(z.literal('')),
+    email: z.string().email().max(200).nullable().optional().or(z.literal('')),
+    location: z.string().max(200).nullable().optional().or(z.literal('')),
+    website_url: z.string().url().max(500).nullable().optional().or(z.literal('')),
+    avatar_url: z.string().url().max(500).nullable().optional().or(z.literal('')),
+});
+
+export const SocialSchema = z.object({
+    platform: z.string().min(1, 'Platform is required').max(100),
+    username: z.string().min(1, 'Username is required').max(200),
+    url: z.string().url().max(500),
+    icon: z.string().max(100).nullable().optional().or(z.literal('')),
 });
 
 // ── Config Schemas ─────────────────────────────────────────
@@ -108,6 +115,7 @@ export type EducationInput = z.infer<typeof EducationSchema>;
 export type SkillInput = z.infer<typeof SkillSchema>;
 export type AchievementInput = z.infer<typeof AchievementSchema>;
 export type ProfileInput = z.infer<typeof ProfileSchema>;
+export type SocialInput = z.infer<typeof SocialSchema>;
 export type BrandingConfigInput = z.infer<typeof BrandingConfigSchema>;
 export type VisualConfigInput = z.infer<typeof VisualConfigSchema>;
 export type LoginInput = z.infer<typeof LoginInputSchema>;

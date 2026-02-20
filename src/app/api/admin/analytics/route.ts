@@ -1,26 +1,41 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { getSession } from '@/security/auth';
+import { apiSuccess, apiError, apiCatch } from '@/core/api-response';
+import { logger } from '@/core/logger';
+import { supabase } from '@/lib/supabase';
+
+// ── Analytics aggregate data types ─────────────────────────
+
+interface AnalyticsData {
+    totalVisits: number;
+    uniqueSessions: number;
+    cliPercent: number;
+    guiPercent: number;
+    topCommands: { command: string; count: number }[];
+    resumeDownloads: number;
+    visitsByDay: { date: string; count: number }[];
+    recentSessions: Record<string, unknown>[];
+}
+
+const EMPTY_ANALYTICS: AnalyticsData = {
+    totalVisits: 0,
+    uniqueSessions: 0,
+    cliPercent: 50,
+    guiPercent: 50,
+    topCommands: [],
+    resumeDownloads: 0,
+    visitsByDay: [],
+    recentSessions: [],
+};
 
 export async function GET() {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (!supabase) {
-        // Return mock data when DB is not configured
-        return NextResponse.json({
-            totalVisits: 0,
-            uniqueSessions: 0,
-            cliPercent: 50,
-            guiPercent: 50,
-            topCommands: [],
-            resumeDownloads: 0,
-            visitsByDay: [],
-            recentSessions: [],
-        });
-    }
-
     try {
+        const session = await getSession();
+        if (!session) return apiError('Unauthorized', 401);
+
+        if (!supabase) {
+            return apiSuccess(EMPTY_ANALYTICS);
+        }
+
         // Total visits (sessions count)
         const { count: totalVisits } = await supabase.from('sessions').select('*', { count: 'exact', head: true });
 
@@ -72,7 +87,7 @@ export async function GET() {
             .order('started_at', { ascending: false })
             .limit(20);
 
-        return NextResponse.json({
+        const data: AnalyticsData = {
             totalVisits: totalVisits || 0,
             uniqueSessions,
             cliPercent,
@@ -80,10 +95,12 @@ export async function GET() {
             topCommands,
             resumeDownloads: resumeDownloads || 0,
             visitsByDay,
-            recentSessions: recentSessions || [],
-        });
+            recentSessions: (recentSessions || []) as Record<string, unknown>[],
+        };
+
+        return apiSuccess(data);
     } catch (error) {
-        console.error('[Analytics Error]', error);
-        return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
+        logger.error('Failed to fetch analytics', { error: String(error) });
+        return apiCatch(error);
     }
 }

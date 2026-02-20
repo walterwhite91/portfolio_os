@@ -20,6 +20,7 @@ import { Github, Linkedin, Mail, Globe, Instagram } from 'lucide-react';
 import GUIInterface from '@/gui/GUIInterface';
 
 import VisitorForm from '@/components/VisitorForm';
+import { APP_VERSION, APP_VERSION_FULL } from '@/config/version';
 
 type CommandType = {
     command: string;
@@ -472,13 +473,32 @@ export default function Terminal() {
                         <a href="/api/generate-resume" target="_blank" className="bg-green-700 text-black font-bold px-4 py-2 hover:bg-green-600 inline-block">
                             DOWNLOAD_RESUME.PDF
                         </a>
-                        <p className="text-xs text-gray-500 mt-2">v1.0.0-signed</p>
+                        <p className="text-xs text-gray-500 mt-2">{APP_VERSION}-signed</p>
                     </div>
                 );
                 break;
 
             case 'speedfetch':
                 const profileInfo = await fetchProfile();
+
+                let uptimeStr = '0h 0m 0s';
+                let resolution = '1920x1080';
+                let platform = 'Unknown';
+                let browser = 'Web Browser';
+
+                if (typeof window !== 'undefined') {
+                    const uptimeMs = performance.now();
+                    const hours = Math.floor(uptimeMs / 3600000);
+                    const minutes = Math.floor((uptimeMs % 3600000) / 60000);
+                    const seconds = Math.floor((uptimeMs % 60000) / 1000);
+                    uptimeStr = `${hours}h ${minutes}m ${seconds}s`;
+                    resolution = `${window.screen.width}x${window.screen.height}`;
+                }
+                if (typeof navigator !== 'undefined') {
+                    platform = navigator.platform || 'Unknown';
+                    browser = navigator.userAgent.split(' ')[0] || 'Web';
+                }
+
                 output = (
                     <div className="flex flex-col md:flex-row gap-8 items-center md:items-start font-mono text-sm">
                         <pre className="text-yellow-500 font-bold text-xs md:text-sm leading-none select-none">
@@ -501,43 +521,39 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                             <div className="text-green-400 font-bold text-lg mb-2">{visitorName || 'guest'}@portfolio-os</div>
                             <div className="flex gap-2">
                                 <span className="text-yellow-500 font-bold">OS:</span>
-                                <span className="text-white">Portfolio OS v1.0.0 (Linux)</span>
+                                <span className="text-white">{APP_VERSION_FULL}</span>
                             </div>
                             <div className="flex gap-2">
                                 <span className="text-yellow-500 font-bold">Host:</span>
-                                <span className="text-white">Next.js 14 + Supabase</span>
+                                <span className="text-white">Next.js 16 + Supabase</span>
                             </div>
                             <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">Kernel:</span>
-                                <span className="text-white">5.15.0-generic</span>
+                                <span className="text-yellow-500 font-bold">Platform:</span>
+                                <span className="text-white">{platform}</span>
                             </div>
                             <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">Uptime:</span>
-                                <span className="text-white">99.9%</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">Packages:</span>
-                                <span className="text-white">npm (142)</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">Shell:</span>
-                                <span className="text-white">zsh 5.8</span>
+                                <span className="text-yellow-500 font-bold">Uptime (Session):</span>
+                                <span className="text-white">{uptimeStr}</span>
                             </div>
                             <div className="flex gap-2">
                                 <span className="text-yellow-500 font-bold">Resolution:</span>
-                                <span className="text-white">1920x1080</span>
+                                <span className="text-white">{resolution}</span>
                             </div>
                             <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">DE:</span>
-                                <span className="text-white">HackerUI</span>
+                                <span className="text-yellow-500 font-bold">Browser:</span>
+                                <span className="text-white truncate max-w-[200px]" title={browser}>{browser}</span>
                             </div>
                             <div className="flex gap-2">
-                                <span className="text-yellow-500 font-bold">WM:</span>
-                                <span className="text-white">TailwindCSS</span>
+                                <span className="text-yellow-500 font-bold">Engine:</span>
+                                <span className="text-white">React 18 + Tailwind v4</span>
                             </div>
                             <div className="flex gap-2">
                                 <span className="text-yellow-500 font-bold">Owner:</span>
-                                <span className="text-white">{profileInfo.full_name}</span>
+                                <span className="text-white">{profileInfo?.full_name || 'Mimansh Neupane'}</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <span className="text-yellow-500 font-bold">Developer:</span>
+                                <a href="https://github.com/walterwhite91" target="_blank" className="text-green-400 hover:text-green-300 underline">Mimansh</a>
                             </div>
                             <div className="mt-4 flex gap-1">
                                 <span className="w-4 h-4 bg-black block"></span>
@@ -625,18 +641,18 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             <div className="mb-8 border-b-2 border-green-900/50 pb-8 select-none">
                 <pre className="text-[10px] md:text-sm font-bold text-green-500 leading-none mb-6">
                     {`
- ___  ___  ___  ___   ___   _   _  ___  _   _ 
- |  \\/  | |_ _| |  \\/  |  /   \\ | \\ | |/ ___| | | | |
- | |\\/| |  | |  | |\\/| | / /\\ \\ |  \\| |\\___ \\ | |_| |
- | |  | |  | |  | |  | |/ /  \\ \\| |\\  | ___) | |  _  |
- |_|  |_| |___| |_|  |_/_/    \\_\\_| \\_||____/  |_| |_|
-                                                      
+ ____   ___  ____ _____ _____ ___  _     ___ ___     ___  ____  
+|  _ \\ / _ \\|  _ \\_   _|  ___/ _ \\| |   |_ _/ _ \\   / _ \\/ ___| 
+| |_) | | | | |_) || | | |_ | | | | |    | | | | | | | | \\___ \\ 
+|  __/| |_| |  _ < | | |  _|| |_| | |___ | | |_| | | |_| |___) |
+|_|    \\___/|_| \\_\\|_| |_|   \\___/|_____|___\\___/   \\___/|____/ 
+                                                                 
 `}
                 </pre>
                 <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-white tracking-widest uppercase mb-1">Mimansh Neupane Pokharel</h1>
-                        <p className="text-green-400 font-mono text-xs md:text-sm">B.Sc. Computer Science • System Architect • Kathmandu University</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-white tracking-widest uppercase mb-1">{systemData?.profile?.full_name || 'Mimansh Neupane Pokharel'}</h1>
+                        <p className="text-green-400 font-mono text-xs md:text-sm">{systemData?.profile?.headline || 'B.Sc. Computer Science • System Architect • Kathmandu University'}</p>
                     </div>
 
                     <div className="flex gap-4 text-gray-400">

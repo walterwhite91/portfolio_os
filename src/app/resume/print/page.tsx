@@ -1,13 +1,20 @@
 
-import { getProfile, getExperience, getEducation, getSkills, getProjects, getAchievements } from '@/lib/api';
+import {
+    profileService,
+    projectsService,
+    experienceService,
+    educationService,
+    skillsService,
+    achievementsService,
+} from '@/core/services/index';
 
 export default async function ResumePrintPage() {
-    const profile = await getProfile();
-    const experience = await getExperience();
-    const education = await getEducation();
-    const skills = await getSkills();
-    const projects = await getProjects();
-    const achievements = await getAchievements();
+    const profile = await profileService.get();
+    const experience = await experienceService.getAll();
+    const education = await educationService.getAll();
+    const skills = await skillsService.getAll();
+    const projects = await projectsService.getAll();
+    const achievements = await achievementsService.getAll();
 
     return (
         <div className="bg-white text-black p-8 max-w-[210mm] mx-auto min-h-[297mm] print:p-0">

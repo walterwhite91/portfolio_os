@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { APP_VERSION } from '@/config/version';
 import { motion } from 'framer-motion';
 import {
     fetchProfile,
@@ -70,7 +71,7 @@ export default function GUIInterface({ visitorName, systemData, onLogout }: GUII
             <div className="w-full md:w-64 flex flex-col gap-2 border-r border-green-900/50 pr-6">
                 <div className="mb-8 select-none">
                     <h1 className="text-xl font-bold text-white tracking-widest">PORTFOLIO_OS</h1>
-                    <p className="text-xs text-green-600">v1.2.0 GUI_MODE</p>
+                    <p className="text-xs text-green-600">{APP_VERSION} GUI_MODE</p>
                 </div>
 
                 <div className="flex flex-col gap-2">

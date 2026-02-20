@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { APP_VERSION } from '@/config/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -75,6 +76,59 @@ function ProfileManager() {
                 />
             </div>
             <SaveButton saving={saving} saved={saved} onClick={handleSave} />
+        </div>
+    );
+}
+
+// ── Socials Manager (inside Profile Tab) ───────────────────
+function SocialsManager() {
+    const { data: socials, loading, reload } = useAdminData<any>('socials');
+    const [editing, setEditing] = useState<any>(null);
+    const [creating, setCreating] = useState(false);
+
+    const handleSave = async (item: any) => {
+        const isNew = !item.id;
+        const url = isNew ? '/api/admin/socials' : `/api/admin/socials/${item.id}`;
+        const method = isNew ? 'POST' : 'PUT';
+        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+        setEditing(null); setCreating(false); reload();
+    };
+
+    const handleDelete = async (id: string) => {
+        await fetch(`/api/admin/socials/${id}`, { method: 'DELETE' });
+        reload();
+    };
+
+    if (loading) return <Loader2 className="animate-spin text-green-500" />;
+
+    if (editing || creating) {
+        const item = editing || { platform: '', username: '', url: '', icon: '' };
+        return <GenericForm fields={[
+            { key: 'platform', label: 'PLATFORM (e.g. GitHub, LinkedIn)' },
+            { key: 'username', label: 'USERNAME' },
+            { key: 'url', label: 'LINK URL' },
+            { key: 'icon', label: 'ICON NAME (lucide-react)' },
+        ]} item={item} onSave={handleSave} onCancel={() => { setEditing(null); setCreating(false); }} />;
+    }
+
+    return (
+        <div className="space-y-4 pt-6 border-t border-green-900/50 mt-8">
+            <h3 className="text-green-500 font-bold tracking-widest text-sm mb-4">SOCIAL_TRANSMISSION_LINKS</h3>
+            <Button onClick={() => setCreating(true)} className="bg-green-900/20 border border-green-500 text-green-500 text-xs">
+                <Plus className="w-3 h-3 mr-1" /> ADD_SOCIAL_LINK
+            </Button>
+            {socials.map((e: any) => (
+                <div key={e.id} className="flex items-center justify-between p-3 border border-green-900/50">
+                    <div>
+                        <h4 className="text-white font-bold">{e.platform}</h4>
+                        <p className="text-xs text-green-600">{e.username}</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={() => setEditing(e)} variant="outline" size="sm" className="text-xs border-green-900 text-green-500">Edit</Button>
+                        <Button onClick={() => handleDelete(e.id)} variant="outline" size="sm" className="text-xs border-red-900 text-red-500"><Trash2 className="w-3 h-3" /></Button>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
@@ -956,7 +1010,7 @@ export default function AdminPanel() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-green-900 pb-4 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-green-500 tracking-widest">OS.CONTROL_PANEL</h1>
-                    <p className="text-xs text-green-700 mt-1">v2.0.0 — Stealth Edition</p>
+                    <p className="text-xs text-green-700 mt-1">{APP_VERSION} — Stealth Edition</p>
                 </div>
                 <div className="flex gap-4 items-center">
                     <span className="text-xs text-gray-500 border border-green-900/50 px-2 py-1">{session.username}@admin</span>
@@ -983,6 +1037,7 @@ export default function AdminPanel() {
 
                 <TabsContent value="profile" className="mt-6">
                     <ManagerCard title="Profile Manager" description="Your public identity."><ProfileManager /></ManagerCard>
+                    <ManagerCard title="Socials Manager" description="Your transmission links."><SocialsManager /></ManagerCard>
                 </TabsContent>
                 <TabsContent value="projects" className="mt-6">
                     <ManagerCard title="Projects Manager" description="CRUD for your projects."><ProjectsManager /></ManagerCard>

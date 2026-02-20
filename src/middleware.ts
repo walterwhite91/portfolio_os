@@ -5,8 +5,9 @@ const COOKIE_NAME = 'pos_session';
 
 // Paths that require authentication
 const PROTECTED_PATHS = ['/admin', '/api/admin'];
-// Paths explicitly excluded from protection
-const EXCLUDED_PATHS = ['/api/admin/login'];
+// Paths explicitly excluded from protection (public read access)
+// Note: branding + visual have public GET but admin-only PUT (enforced in route handlers)
+const EXCLUDED_PATHS = ['/api/admin/login', '/api/admin/branding', '/api/admin/visual'];
 
 function isProtected(pathname: string): boolean {
     return PROTECTED_PATHS.some(p => pathname.startsWith(p));

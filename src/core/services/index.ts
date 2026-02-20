@@ -8,6 +8,7 @@ import {
     educationRepo,
     skillsRepo,
     achievementsRepo,
+    socialsRepo,
     profileRepo,
     visitorsRepo,
     brandingRepo,
@@ -19,6 +20,7 @@ import {
     type EducationRow,
     type SkillRow,
     type AchievementRow,
+    type SocialRow,
     type ProfileRow,
     type BrandingConfigRow,
     type VisualConfigRow,
@@ -31,6 +33,7 @@ import {
     SkillSchema,
     AchievementSchema,
     ProfileSchema,
+    SocialSchema,
     BrandingConfigSchema,
     VisualConfigSchema,
     VisitorInputSchema,
@@ -207,6 +210,48 @@ export const achievementsService = {
         } catch {
             return ACHIEVEMENTS as unknown as AchievementRow[];
         }
+    },
+};
+
+// ── Socials Service ────────────────────────────────────────
+
+const SOCIALS_DEFAULT = [
+    { platform: 'GitHub', username: 'walterwhite91', url: 'https://github.com/walterwhite91' },
+    { platform: 'LinkedIn', username: 'mimansh-neupane', url: 'https://linkedin.com/in/mimansh-neupane' },
+    { platform: 'Instagram', username: 'neu.mimansh', url: 'https://instagram.com/neu.mimansh' }
+];
+
+export const socialsService = {
+    async getAll(): Promise<SocialRow[]> {
+        if (!socialsRepo.isConfigured) return SOCIALS_DEFAULT as unknown as SocialRow[];
+        try {
+            const data = await socialsRepo.findAll('platform', true);
+            return data.length ? data : (SOCIALS_DEFAULT as unknown as SocialRow[]);
+        } catch {
+            return SOCIALS_DEFAULT as unknown as SocialRow[];
+        }
+    },
+
+    async create(input: unknown, adminUsername?: string): Promise<SocialRow> {
+        const validated = validate(SocialSchema, input);
+        const result = await socialsRepo.create(validated as Partial<SocialRow>);
+        logger.audit('socials.create', { adminUsername, platform: validated.platform });
+        await auditService.log('socials.create', adminUsername, `Created social link: ${validated.platform}`);
+        return result;
+    },
+
+    async update(id: string, input: unknown, adminUsername?: string): Promise<SocialRow> {
+        const validated = validate(SocialSchema, input);
+        const result = await socialsRepo.update(id, validated as Partial<SocialRow>);
+        logger.audit('socials.update', { adminUsername, id, platform: validated.platform });
+        await auditService.log('socials.update', adminUsername, `Updated social link: ${validated.platform}`);
+        return result;
+    },
+
+    async delete(id: string, adminUsername?: string): Promise<void> {
+        await socialsRepo.delete(id);
+        logger.audit('socials.delete', { adminUsername, id });
+        await auditService.log('socials.delete', adminUsername, `Deleted social link: ${id}`);
     },
 };
 

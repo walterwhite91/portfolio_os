@@ -13,11 +13,13 @@ export default function AdminLoginModal({ onClose }: AdminLoginModalProps) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
 
         try {
             const res = await fetch('/api/admin/login', {
@@ -31,14 +33,12 @@ export default function AdminLoginModal({ onClose }: AdminLoginModalProps) {
             if (data.success) {
                 router.push('/admin');
             } else {
-                // Silent failure — reset fields, no error message
-                setUsername('');
+                setError('Invalid credentials');
                 setPassword('');
                 setLoading(false);
             }
         } catch {
-            // Silent failure
-            setUsername('');
+            setError('Connection failed');
             setPassword('');
             setLoading(false);
         }
@@ -67,12 +67,20 @@ export default function AdminLoginModal({ onClose }: AdminLoginModalProps) {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="bg-red-900/20 border border-red-900/50 text-red-500 p-2 text-xs text-center mb-4">
+                                {error}
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs text-green-700 mb-1 tracking-wider">USERNAME</label>
                             <input
                                 type="text"
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={(e) => {
+                                    setUsername(e.target.value);
+                                    setError(null);
+                                }}
                                 className="w-full bg-black border border-green-900/50 text-green-100 p-2 text-sm font-mono focus:outline-none focus:border-green-500 transition-colors"
                                 autoFocus
                                 autoComplete="off"
@@ -86,7 +94,10 @@ export default function AdminLoginModal({ onClose }: AdminLoginModalProps) {
                             <input
                                 type="password"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    setError(null);
+                                }}
                                 className="w-full bg-black border border-green-900/50 text-green-100 p-2 text-sm font-mono focus:outline-none focus:border-green-500 transition-colors"
                                 maxLength={128}
                                 required

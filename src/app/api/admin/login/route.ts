@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { validateCredentials, setSessionCookie } from '@/security/auth';
 import { isRateLimited, resetRateLimit } from '@/security/rate-limit';
+import { LoginInputSchema } from '@/core/validators/schemas';
+import { auditService } from '@/core/services/index';
+import { apiSuccess, apiError } from '@/core/api-response';
+import { logger } from '@/core/logger';
 
 export async function POST(req: NextRequest) {
     try {
@@ -10,39 +14,37 @@ export async function POST(req: NextRequest) {
             || 'unknown';
 
         if (isRateLimited(ip)) {
-            // Silently return failure — no hints
-            return NextResponse.json({ success: false }, { status: 200 });
+            // Silently return failure — no hints to attackers
+            return apiSuccess({ success: false });
         }
 
         const body = await req.json();
-        const { username, password } = body;
 
-        if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
-            return NextResponse.json({ success: false }, { status: 200 });
+        // Zod validation — strict schema check
+        const parsed = LoginInputSchema.safeParse(body);
+        if (!parsed.success) {
+            return apiSuccess({ success: false });
         }
 
-        // Sanitize inputs (max length, no control chars)
-        if (username.length > 64 || password.length > 128) {
-            return NextResponse.json({ success: false }, { status: 200 });
-        }
-
+        const { username, password } = parsed.data;
         const valid = await validateCredentials(username, password);
 
         if (!valid) {
-            // Log failed attempt (to console; DB logging added in Phase 4)
-            console.warn(`[AUDIT] Failed login attempt from ${ip} for user: ${username}`);
-            return NextResponse.json({ success: false }, { status: 200 });
+            logger.warn('Failed login attempt', { ip, username });
+            await auditService.log('login.failed', username, `Failed login from ${ip}`, ip);
+            return apiError('Invalid credentials', 401);
         }
 
         // Success — set cookie and reset rate limit
         await setSessionCookie(username);
         resetRateLimit(ip);
 
-        console.log(`[AUDIT] Successful login from ${ip} for user: ${username}`);
+        logger.info('Successful login', { ip, username });
+        await auditService.log('login.success', username, `Successful login from ${ip}`, ip);
 
-        return NextResponse.json({ success: true }, { status: 200 });
+        return apiSuccess({ success: true });
     } catch (error) {
-        console.error('[AUTH] Login error:', error);
-        return NextResponse.json({ success: false }, { status: 200 });
+        logger.error('Login error', { error: String(error) });
+        return apiSuccess({ success: false });
     }
 }
